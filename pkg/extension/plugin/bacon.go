@@ -3,7 +3,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/hegemone/kore-poc/korecomm-go/pkg/comm"
+	"github.com/hegemone/kore/pkg/comm"
 	log "github.com/sirupsen/logrus"
 )
 

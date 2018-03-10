@@ -2,7 +2,7 @@ package comm
 
 import (
 	"fmt"
-	"github.com/hegemone/kore-poc/korecomm-go/pkg/config"
+	"github.com/hegemone/kore/pkg/config"
 	log "github.com/sirupsen/logrus"
 	"path/filepath"
 )
@@ -23,7 +23,11 @@ type Engine struct {
 // NewEngine creates a new Engine.
 func NewEngine() *Engine {
 	// Configurable size of the internal message buffers
-	bufferSize := config.GetEngineConfig().BufferSize
+	c, err := config.New()
+	if err != nil {
+		panic(err)
+	}
+	bufferSize := c.GetEngine().BufferSize
 
 	return &Engine{
 		rawIngressBuffer: make(chan rawIngressBufferMsg, bufferSize),
@@ -215,14 +219,18 @@ func (e *Engine) handleEgress(ebm egressBufferMsg) {
 // TODO: load{Plugins,Adapters} are almost identical. Should make extension
 // loading generic.
 func (e *Engine) loadPlugins() error {
-	config := config.GetPluginConfig()
-	log.Infof("Loading plugins from: %v", config.Dir)
+	c, err := config.New()
+	if err != nil {
+		return err
+	}
+	plugConf := c.GetPlugin()
+	log.Infof("Loading plugins from: %v", plugConf.Dir)
 
 	// TODO: Check that requested plugins are available in dir, log if not
-	for _, pluginName := range config.Enabled {
+	for _, pluginName := range plugConf.Enabled {
 		log.Infof("-> %v", pluginName)
 		pluginFile := filepath.Join(
-			config.Dir,
+			plugConf.Dir,
 			fmt.Sprintf("%s.so", pluginName),
 		)
 
@@ -245,14 +253,18 @@ func (e *Engine) loadPlugins() error {
 }
 
 func (e *Engine) loadAdapters() error {
-	config := config.GetAdapterConfig()
-	log.Infof("Loading adapters from: %v", config.Dir)
+	c, err := config.New()
+	if err != nil {
+		return err
+	}
+	adapterConf := c.GetAdapter()
+	log.Infof("Loading adapters from: %v", adapterConf.Dir)
 
 	// TODO: Check that requested adapters are available in dir, log if not
-	for _, adapterName := range config.Enabled {
+	for _, adapterName := range adapterConf.Enabled {
 		log.Infof("-> %v", adapterName)
 		adapterFile := filepath.Join(
-			config.Dir,
+			adapterConf.Dir,
 			fmt.Sprintf("%s.so", adapterName),
 		)
 		log.Infof("file: %s", adapterFile)

@@ -6,80 +6,81 @@
 package config
 
 import (
+	"fmt"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	"os"
-	"sync"
 )
 
 const (
-	PluginDirEnvVar  = "KORECOMM_PLUGIN_DIR"
-	AdapterDirEnvVar = "KORECOMM_ADAPTER_DIR"
+	ConfigEnvVar     = "KORE_CONFIG"
+	PluginDirEnvVar  = "KORE_PLUGIN_DIR"
+	AdapterDirEnvVar = "KORE_ADAPTER_DIR"
 )
 
-type EngineConfig struct {
+type Engine struct {
 	BufferSize uint
 }
 
-type ExtensionConfig struct {
+type Plugin struct {
 	Dir     string
 	Enabled []string
 }
 
-type PluginConfig struct {
-	ExtensionConfig
+type Adapter struct {
+	Dir     string
+	Enabled []string
 }
 
-type AdapterConfig struct {
-	ExtensionConfig
+type Config struct {
+	Engine   `yaml:"engine"`
+	Plugins  Plugin  `yaml:"plugins"`
+	Adapters Adapter `yaml:"adapters"`
 }
 
-// Just fake out the yaml config for now
-var mockConfig = map[string]interface{}{
-	"engine": EngineConfig{
-		BufferSize: 8,
-	},
-	"plugins": PluginConfig{
-		ExtensionConfig: ExtensionConfig{
-			Dir: os.Getenv(PluginDirEnvVar),
-			Enabled: []string{
-				"bacon.plugins.kore.nsk.io",
-			},
+func New() (*Config, error) {
+	c := Config{
+		Engine: Engine{
+			BufferSize: 8,
 		},
-	},
-	"adapters": AdapterConfig{
-		ExtensionConfig: ExtensionConfig{
-			Dir: os.Getenv(AdapterDirEnvVar),
-			Enabled: []string{
-				"ex-discord.adapters.kore.nsk.io",
-				"ex-irc.adapters.kore.nsk.io",
-			},
-		},
-	},
+		Plugins:  Plugin{},
+		Adapters: Adapter{},
+	}
+
+	var f []byte
+	var err error
+
+	if env, exists := os.LookupEnv(ConfigEnvVar); exists {
+		f, err = ioutil.ReadFile(env)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		f, err = ioutil.ReadFile("config.yaml")
+		if os.IsNotExist(err) {
+			return &c, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	err = yaml.Unmarshal(f, &c)
+	if err != nil {
+		return nil, fmt.Errorf("unable to unmarshal yaml: %s", err)
+	}
+
+	return &c, nil
 }
 
-var _instance *map[string]interface{}
-var once sync.Once
-
-func instance() *map[string]interface{} {
-	// Threadsafe lazy accessor
-	once.Do(func() {
-		_instance = loadConfigFile()
-	})
-	return _instance
+func (c *Config) GetEngine() Engine {
+	return c.Engine
 }
 
-func GetEngineConfig() EngineConfig {
-	return (*instance())["engine"].(EngineConfig)
+func (c *Config) GetPlugin() Plugin {
+	return c.Plugins
 }
 
-func GetPluginConfig() PluginConfig {
-	return (*instance())["plugins"].(PluginConfig)
-}
-
-func GetAdapterConfig() AdapterConfig {
-	return (*instance())["adapters"].(AdapterConfig)
-}
-
-func loadConfigFile() *map[string]interface{} {
-	// Load file location from env var, or use default
-	return &mockConfig
+func (c *Config) GetAdapter() Adapter {
+	return c.Adapters
 }
