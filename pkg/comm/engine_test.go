@@ -1,5 +1,0 @@
-package comm
-
-import (
-	"testing"
-)
