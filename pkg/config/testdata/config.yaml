@@ -1,0 +1,12 @@
+engine:
+  buffersize: 10
+adapters:
+  dir: "adapts"
+  enabled:
+  - yolos.io
+  - rolos.io
+plugins:
+  dir: "plugs"
+  enabled:
+  - bacon.io
+  - jam.io
