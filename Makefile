@@ -21,7 +21,7 @@ adapters: $(ADAPTER_SOURCES)
 kore: $(SOURCES) adapters plugins
 	@go build -o ${BUILD_DIR}/kore -i -ldflags="-s -w" ./cmd/kore
 
-build: kore test
+build: vendor kore test
 	@echo > /dev/null
 
 test:
