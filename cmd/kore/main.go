@@ -5,8 +5,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/hegemone/kore-poc/korecomm-go/pkg/comm"
-	"github.com/hegemone/kore-poc/korecomm-go/pkg/mock"
+	"github.com/hegemone/kore/pkg/comm"
+	"github.com/hegemone/kore/pkg/mock"
 	log "github.com/sirupsen/logrus"
 )
 
