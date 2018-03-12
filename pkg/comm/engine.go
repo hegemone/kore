@@ -71,7 +71,7 @@ func (e *Engine) Start() {
 
 	// Spawn listening routines for each adapter
 	for _, adapter := range e.adapters {
-		adapterCh := make(chan RawIngressMessage)
+		adapterCh := make(chan RawIngressMessage, 1)
 
 		go func(adapter *Adapter, adapterCh chan RawIngressMessage) {
 			// Tell the adapter to start listening and sending messages back via
@@ -83,6 +83,7 @@ func (e *Engine) Start() {
 			// rawIngressBuffer for parsing.
 			for rim := range adapterCh {
 				e.rawIngressBuffer <- rawIngressBufferMsg{adapter.Name, rim}
+				funcDone()
 			}
 		}(adapter, adapterCh)
 	}

@@ -14,6 +14,17 @@ func TestStart(t *testing.T) {
 		adapters:         make(map[string]*Adapter),
 	}
 
+	e.adapters["test"] = &Adapter{Name: "test"}
+
+	sleep := make(chan bool)
+	funcDone = func() {
+		sleep <- true
+	}
+
+	aListen = func(adapter *Adapter, inChan chan<- RawIngressMessage) {
+		inChan <- RawIngressMessage{}
+	}
+
 	HRICalled, HICalled, HECalled := false, false, false
 	eHandleRawIngress = func(*Engine, rawIngressBufferMsg) {
 		HRICalled = true
@@ -25,13 +36,11 @@ func TestStart(t *testing.T) {
 		HECalled = true
 	}
 
-	sleep := make(chan bool)
-
-	funcDone = func() {
-		sleep <- true
-	}
-
 	go e.Start()
+
+	m := <-e.rawIngressBuffer
+	t.Logf("Received message %v from ingress buffer", m)
+	<-sleep
 
 	e.rawIngressBuffer <- rawIngressBufferMsg{}
 	<-sleep
