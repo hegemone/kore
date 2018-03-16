@@ -7,33 +7,22 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// pkg level client reference
-var ircAdapterClient *mock.PlatformClient
-
-////////////////////////////////////////////////////////////////////////////////
-// Concrete Behavioral Implementations
-////////////////////////////////////////////////////////////////////////////////
-
-func Init() {
-	log.Info("ex-irc.adapters::Init")
-	// NOTE: In a real adapter, this client is probably some kind of API used
-	// to actually speak to irc. For the purposes of this POC, we are using
-	// a mocked "PlatformClient" that is designed behave like that platform API might.
-	// It is driven by Stdin thanks to the StdinDemux.
-	ircAdapterClient = mock.NewPlatformClient("irc")
+type adapter struct {
+	client mock.PlatformClient
 }
 
-func Name() string {
+func (a *adapter) Name() string {
 	return "ex-irc.adapters.kore.nsk.io"
 }
 
-func Listen(ingressCh chan<- comm.RawIngressMessage) {
+func (a *adapter) Listen(ingressCh chan<- comm.RawIngressMessage) {
 	log.Debug("ex-irc.adapters::Listen")
 
-	ircAdapterClient.Connect()
+	a.client = *mock.NewPlatformClient("irc")
+	a.client.Connect()
 
 	go func() {
-		for clientMsg := range ircAdapterClient.Chat {
+		for clientMsg := range a.client.Chat {
 			ingressCh <- comm.RawIngressMessage{
 				Identity:   clientMsg.User,
 				RawContent: clientMsg.Message,
@@ -42,6 +31,9 @@ func Listen(ingressCh chan<- comm.RawIngressMessage) {
 	}()
 }
 
-func SendMessage(m string) {
-	ircAdapterClient.SendMessage(m)
+func (a *adapter) SendMessage(m comm.EgressMessage) {
+	a.client.SendMessage(m.Serialize())
 }
+
+// Adapter is the exported plugin symbol picked up by engine
+var Adapter adapter
