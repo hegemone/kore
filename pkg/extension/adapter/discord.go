@@ -8,32 +8,26 @@ import (
 )
 
 // pkg level client reference
-var discordAdapterClient *mock.PlatformClient
+type adapter struct {
+	client mock.PlatformClient
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Concrete Behavioral Implementations
 ////////////////////////////////////////////////////////////////////////////////
 
-func Init() {
-	log.Info("ex-discord.adapters::Init")
-	// NOTE: In a real adapter, this client is probably some kind of API used
-	// to actually speak to discord. For the purposes of this POC, we are using
-	// a mocked "PlatformClient" that is designed behave like that platform API might.
-	// It is driven by Stdin thanks to the StdinDemux.
-	discordAdapterClient = mock.NewPlatformClient("discord")
+func (a *adapter) Name() string {
+	return "discord"
 }
 
-func Name() string {
-	return "ex-discord.adapters.kore.nsk.io"
-}
-
-func Listen(ingressCh chan<- comm.RawIngressMessage) {
+func (a *adapter) Listen(ingressCh chan<- comm.RawIngressMessage) {
 	log.Debug("ex-discord.adapters::Listen")
 
-	discordAdapterClient.Connect()
+	a.client = *mock.NewPlatformClient("discord")
+	a.client.Connect()
 
 	go func() {
-		for clientMsg := range discordAdapterClient.Chat {
+		for clientMsg := range a.client.Chat {
 			ingressCh <- comm.RawIngressMessage{
 				Identity:   clientMsg.User,
 				RawContent: clientMsg.Message,
@@ -42,6 +36,8 @@ func Listen(ingressCh chan<- comm.RawIngressMessage) {
 	}()
 }
 
-func SendMessage(m string) {
-	discordAdapterClient.SendMessage(m)
+func (a *adapter) SendMessage(m comm.EgressMessage) {
+	a.client.SendMessage(m.Serialize())
 }
+
+var Adapter adapter

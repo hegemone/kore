@@ -17,7 +17,7 @@ type Engine struct {
 
 	// Extensions
 	plugins  map[string]*Plugin
-	adapters map[string]*Adapter
+	adapters map[string]Adapter
 }
 
 // NewEngine creates a new Engine.
@@ -34,7 +34,7 @@ func NewEngine() *Engine {
 		ingressBuffer:    make(chan ingressBufferMsg, bufferSize),
 		egressBuffer:     make(chan egressBufferMsg, bufferSize),
 		plugins:          make(map[string]*Plugin),
-		adapters:         make(map[string]*Adapter),
+		adapters:         make(map[string]Adapter),
 	}
 }
 
@@ -51,6 +51,16 @@ func (e *Engine) LoadExtensions() error {
 	return nil
 }
 
+// These are all helper functions to allow for testing. I'll need to look
+// into if there isn't a better way to structure the code to make testing
+// easier but for now, this'll do.
+var (
+	eHandleRawIngress = (*Engine).handleRawIngress
+	eHandleIngress    = (*Engine).handleIngress
+	eHandleEgress     = (*Engine).handleEgress
+	funcDone          = func() {}
+)
+
 // Start will cause the engine to start listening on all successfully loaded
 // adapters. On the receipt of any new message from an adapter, it will parse
 // the message and determine if the contents are a command. If the message does
@@ -65,7 +75,7 @@ func (e *Engine) Start() {
 	for _, adapter := range e.adapters {
 		adapterCh := make(chan RawIngressMessage)
 
-		go func(adapter *Adapter, adapterCh chan RawIngressMessage) {
+		go func(adapter Adapter, adapterCh chan RawIngressMessage) {
 			// Tell the adapter to start listening and sending messages back via
 			// their own ingress channel. Listen should be non-blocking!
 			adapter.Listen(adapterCh)
@@ -74,7 +84,8 @@ func (e *Engine) Start() {
 			// for RawIngressMessages. Adapter channels are fanned-in to the
 			// rawIngressBuffer for parsing.
 			for rim := range adapterCh {
-				e.rawIngressBuffer <- rawIngressBufferMsg{adapter.Name, rim}
+				e.rawIngressBuffer <- rawIngressBufferMsg{adapter.Name(), rim}
+				funcDone()
 			}
 		}(adapter, adapterCh)
 	}
@@ -276,10 +287,7 @@ func (e *Engine) loadAdapters() error {
 			return err
 		}
 
-		// Initialize the adapters in determinic sequence. Init should be used for
-		// things like establishing a connection with an external platform.
-		loadedAdapter.Init()
-		e.adapters[loadedAdapter.Name] = loadedAdapter
+		e.adapters[loadedAdapter.Name()] = loadedAdapter
 	}
 
 	log.Info("Successfully loaded adapters:")
