@@ -4,6 +4,18 @@ import (
 	"testing"
 )
 
+type TestAdapter struct{}
+
+func (a *TestAdapter) Name() string {
+	return "test"
+}
+
+func (a *TestAdapter) Listen(inChan chan<- RawIngressMessage) {
+	inChan <- RawIngressMessage{}
+}
+
+func (a *TestAdapter) SendMessage(e EgressMessage) {}
+
 func TestStart(t *testing.T) {
 	bufferSize := 8
 	e := &Engine{
@@ -11,18 +23,14 @@ func TestStart(t *testing.T) {
 		ingressBuffer:    make(chan ingressBufferMsg, bufferSize),
 		egressBuffer:     make(chan egressBufferMsg, bufferSize),
 		plugins:          make(map[string]*Plugin),
-		adapters:         make(map[string]*Adapter),
+		adapters:         make(map[string]Adapter),
 	}
 
-	e.adapters["test"] = &Adapter{Name: "test"}
+	e.adapters["test"] = &TestAdapter{}
 
 	sleep := make(chan bool)
 	funcDone = func() {
 		sleep <- true
-	}
-
-	aListen = func(adapter *Adapter, inChan chan<- RawIngressMessage) {
-		inChan <- RawIngressMessage{}
 	}
 
 	HRICalled, HICalled, HECalled := false, false, false
