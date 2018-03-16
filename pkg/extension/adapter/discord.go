@@ -7,14 +7,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// pkg level client reference
 type adapter struct {
 	client mock.PlatformClient
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// Concrete Behavioral Implementations
-////////////////////////////////////////////////////////////////////////////////
 
 func (a *adapter) Name() string {
 	return "discord"
@@ -40,4 +35,5 @@ func (a *adapter) SendMessage(m comm.EgressMessage) {
 	a.client.SendMessage(m.Serialize())
 }
 
+// Adapter is the exported plugin symbol picked up by the engine
 var Adapter adapter
