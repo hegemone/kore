@@ -5,7 +5,7 @@ IMAGE            ?= $(REGISTRY)/$(ORG)/kore
 BUILD_DIR        = "${GOPATH}/src/github.com/hegemone/kore/build"
 SOURCES          := $(shell find . -name '*.go' -not -path "*/vendor/*" -not -path "*/extensions/*")
 TEST_SOURCES	 := $(shell go list ./... | grep -v extension)
-PROJECT_ROOT := ""$(abspath $(lastword $(MAKEFILE_LIST)))/..""
+PROJECT_ROOT := $(abspath $(lastword $(MAKEFILE_LIST)))/..
 .DEFAULT_GOAL    := build
 
 vendor:
