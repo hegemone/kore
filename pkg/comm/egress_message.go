@@ -3,7 +3,8 @@ package comm
 // EgressMessage is the structured outgoing message Adapters should implement
 // how to handle in their `SendMessage` function.
 type EgressMessage struct {
-	Content string
+	ChannelID string
+	Content   string
 }
 
 // Serialize simply serializes an `EgressMessage`.

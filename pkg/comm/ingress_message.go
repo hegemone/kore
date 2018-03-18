@@ -6,6 +6,7 @@ package comm
 type Originator struct {
 	Identity    string
 	AdapterName string
+	ChannelID   string
 }
 
 // IngressMessage is the structured, parsed message representing an incoming
@@ -20,5 +21,6 @@ type IngressMessage struct {
 // engine. Has not yet been parsed to determine if the message is a cmd or not.
 type RawIngressMessage struct {
 	Identity   string
+	ChannelID  string
 	RawContent string
 }

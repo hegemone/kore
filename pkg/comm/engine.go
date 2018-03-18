@@ -70,7 +70,7 @@ func (e *Engine) Start() {
 
 	// Spawn listening routines for each adapter
 	for _, adapter := range e.adapters {
-		adapterCh := make(chan RawIngressMessage, 1)
+		adapterCh := make(chan RawIngressMessage, 2)
 
 		go func(adapter Adapter, adapterCh chan RawIngressMessage) {
 			// Tell the adapter to start listening and sending messages back via
@@ -148,7 +148,7 @@ func (e *Engine) handleRawIngress(m rawIngressBufferMsg) {
 
 		e.ingressBuffer <- ingressBufferMsg{
 			IngressMessage: IngressMessage{
-				Originator: Originator{Identity: rm.Identity, AdapterName: adapterName},
+				Originator: Originator{Identity: rm.Identity, ChannelID: rm.ChannelID, AdapterName: adapterName},
 				Content:    content,
 			},
 		}
@@ -185,7 +185,7 @@ func (e *Engine) handleIngress(ibm ingressBufferMsg) {
 			if delegate.response != "" {
 				e.egressBuffer <- egressBufferMsg{
 					Originator:    im.Originator,
-					EgressMessage: EgressMessage{delegate.response},
+					EgressMessage: EgressMessage{ChannelID: im.Originator.ChannelID, Content: delegate.response},
 				}
 			}
 		}
