@@ -6,7 +6,6 @@ import (
 	"syscall"
 
 	"github.com/hegemone/kore/pkg/comm"
-	"github.com/hegemone/kore/pkg/mock"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -30,10 +29,6 @@ func main() {
 		log.Fatal(err.Error())
 		os.Exit(FatalExitCode)
 	}
-
-	// Start the demux early
-	demux := mock.StdinDemuxInstance()
-	demux.Listen()
 
 	engine := comm.NewEngine()
 

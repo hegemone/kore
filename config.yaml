@@ -1,11 +1,11 @@
 engine:
   buffersize: 8
 adapters:
-  dir: ""
+  dir: "/usr/lib/kore"
   enabled:
   - ex-discord.adapters.kore.nsk.io
   - ex-irc.adapters.kore.nsk.io
 plugins:
-  dir: ""
+  dir: "/usr/lib/kore"
   enabled:
   - bacon.plugins.kore.nsk.io

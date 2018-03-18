@@ -2,37 +2,53 @@
 package main
 
 import (
+	"fmt"
+	"github.com/bwmarrin/discordgo"
 	"github.com/hegemone/kore/pkg/comm"
-	"github.com/hegemone/kore/pkg/mock"
 	log "github.com/sirupsen/logrus"
+	"os"
 )
 
 type adapter struct {
-	client mock.PlatformClient
+	ingressChan chan<- comm.RawIngressMessage
+	client      *discordgo.Session
 }
 
 func (a *adapter) Name() string {
-	return "discord"
+	return "ex-discord.adapters.kore.nsk.io"
 }
 
 func (a *adapter) Listen(ingressCh chan<- comm.RawIngressMessage) {
 	log.Debug("ex-discord.adapters::Listen")
 
-	a.client = *mock.NewPlatformClient("discord")
-	a.client.Connect()
+	a.ingressChan = ingressCh
 
-	go func() {
-		for clientMsg := range a.client.Chat {
-			ingressCh <- comm.RawIngressMessage{
-				Identity:   clientMsg.User,
-				RawContent: clientMsg.Message,
-			}
-		}
-	}()
+	var err error
+	a.client, err = discordgo.New(fmt.Sprintf("Bot %s", os.Getenv("DISCORD_TOKEN")))
+	if err != nil {
+		log.Errorf("unable to establish Discord session: %s", err)
+		panic(err)
+	}
+
+	a.client.AddHandler(a.messageCreate)
+
+	err = a.client.Open()
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (a *adapter) SendMessage(m comm.EgressMessage) {
-	a.client.SendMessage(m.Serialize())
+	a.client.ChannelMessageSend(m.ChannelID, m.Serialize())
+	//a.client.SendMessage(m.Serialize())
+}
+
+func (a *adapter) messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if m.Author.ID == s.State.User.ID {
+		return
+	}
+
+	a.ingressChan <- comm.RawIngressMessage{m.Author.Username, m.ChannelID, m.Content}
 }
 
 // Adapter is the exported plugin symbol picked up by the engine
