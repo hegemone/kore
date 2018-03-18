@@ -17,7 +17,7 @@ type Engine struct {
 
 	// Extensions
 	plugins  map[string]*Plugin
-	adapters map[string]*Adapter
+	adapters map[string]Adapter
 }
 
 // NewEngine creates a new Engine.
@@ -34,7 +34,7 @@ func NewEngine() *Engine {
 		ingressBuffer:    make(chan ingressBufferMsg, bufferSize),
 		egressBuffer:     make(chan egressBufferMsg, bufferSize),
 		plugins:          make(map[string]*Plugin),
-		adapters:         make(map[string]*Adapter),
+		adapters:         make(map[string]Adapter),
 	}
 }
 
@@ -45,11 +45,18 @@ func (e *Engine) LoadExtensions() error {
 	if err := e.loadPlugins(); err != nil {
 		return err
 	}
-	if err := e.loadAdapters(); err != nil {
-		return err
-	}
-	return nil
+	return e.loadAdapters()
 }
+
+// These are all helper functions to allow for testing. I'll need to look
+// into if there isn't a better way to structure the code to make testing
+// easier but for now, this'll do.
+var (
+	eHandleRawIngress = (*Engine).handleRawIngress
+	eHandleIngress    = (*Engine).handleIngress
+	eHandleEgress     = (*Engine).handleEgress
+	funcDone          = func() {}
+)
 
 // Start will cause the engine to start listening on all successfully loaded
 // adapters. On the receipt of any new message from an adapter, it will parse
@@ -63,9 +70,9 @@ func (e *Engine) Start() {
 
 	// Spawn listening routines for each adapter
 	for _, adapter := range e.adapters {
-		adapterCh := make(chan RawIngressMessage)
+		adapterCh := make(chan RawIngressMessage, 1)
 
-		go func(adapter *Adapter, adapterCh chan RawIngressMessage) {
+		go func(adapter Adapter, adapterCh chan RawIngressMessage) {
 			// Tell the adapter to start listening and sending messages back via
 			// their own ingress channel. Listen should be non-blocking!
 			adapter.Listen(adapterCh)
@@ -74,7 +81,8 @@ func (e *Engine) Start() {
 			// for RawIngressMessages. Adapter channels are fanned-in to the
 			// rawIngressBuffer for parsing.
 			for rim := range adapterCh {
-				e.rawIngressBuffer <- rawIngressBufferMsg{adapter.Name, rim}
+				e.rawIngressBuffer <- rawIngressBufferMsg{adapter.Name(), rim}
+				funcDone()
 			}
 		}(adapter, adapterCh)
 	}
@@ -83,20 +91,23 @@ func (e *Engine) Start() {
 	for {
 		select {
 		case m := <-e.rawIngressBuffer:
-			e.handleRawIngress(m)
+			eHandleRawIngress(e, m)
+			funcDone()
 		case m := <-e.ingressBuffer:
-			e.handleIngress(m)
+			eHandleIngress(e, m)
+			funcDone()
 		case m := <-e.egressBuffer:
-			e.handleEgress(m)
+			eHandleEgress(e, m)
+			funcDone()
 		}
 	}
 }
 
 // Buffer messages are internal messaging types usually containing a public
 // payload + some kind of metadata, ex: to facilitate routing
-
 type rawIngressBufferMsg struct {
-	AdapterName       string
+	AdapterName string // e.g. Discord
+	// the raw message, i.e. `!cmdTrigger cmd `
 	RawIngressMessage RawIngressMessage
 }
 
@@ -144,10 +155,11 @@ func (e *Engine) handleRawIngress(m rawIngressBufferMsg) {
 	}()
 }
 
+// parseRawContent takes in the entire command string and strips off the command
+// symbol. In the case of the original Showbot, this would be `!`. It's possible
+// in the future that this function will do more processing to aid in message
+// routing.
 func parseRawContent(rawContent string) string {
-	// NOTE: It's possible in the future we'll want more processing of the raw content
-	// some kind of metadata that might be useful for the engine to route the cmd
-	// to the plugin. for now
 	return rawContent[1:len(rawContent)]
 }
 
@@ -245,7 +257,7 @@ func (e *Engine) loadPlugins() error {
 	}
 
 	log.Info("Successfully loaded plugins:")
-	for pluginName, _ := range e.plugins {
+	for pluginName := range e.plugins {
 		log.Infof("-> %s", pluginName)
 	}
 
@@ -276,14 +288,11 @@ func (e *Engine) loadAdapters() error {
 			return err
 		}
 
-		// Initialize the adapters in determinic sequence. Init should be used for
-		// things like establishing a connection with an external platform.
-		loadedAdapter.Init()
-		e.adapters[loadedAdapter.Name] = loadedAdapter
+		e.adapters[loadedAdapter.Name()] = loadedAdapter
 	}
 
 	log.Info("Successfully loaded adapters:")
-	for adapterName, _ := range e.adapters {
+	for adapterName := range e.adapters {
 		log.Infof("-> %s", adapterName)
 	}
 	return nil
