@@ -2,13 +2,14 @@
 package main
 
 import (
+	irc "github.com/fluffle/goirc/client"
 	"github.com/hegemone/kore/pkg/comm"
-	"github.com/hegemone/kore/pkg/mock"
 	log "github.com/sirupsen/logrus"
 )
 
 type adapter struct {
-	client mock.PlatformClient
+	client      *irc.Conn
+	ingressChan chan<- comm.RawIngressMessage
 }
 
 func (a *adapter) Name() string {
@@ -17,22 +18,32 @@ func (a *adapter) Name() string {
 
 func (a *adapter) Listen(ingressCh chan<- comm.RawIngressMessage) {
 	log.Debug("ex-irc.adapters::Listen")
+	a.ingressChan = ingressCh
 
-	a.client = *mock.NewPlatformClient("irc")
-	a.client.Connect()
+	cfg := irc.NewConfig("kore")
+	cfg.Server = "irc.geekshed.net:6667"
 
-	go func() {
-		for clientMsg := range a.client.Chat {
-			ingressCh <- comm.RawIngressMessage{
-				Identity:   clientMsg.User,
-				RawContent: clientMsg.Message,
-			}
+	a.client = irc.Client(cfg)
+
+	a.client.HandleFunc(irc.CONNECTED, func(conn *irc.Conn, line *irc.Line) {
+		conn.Join("#jbot-test")
+	})
+
+	a.client.HandleFunc(irc.PRIVMSG, func(conn *irc.Conn, line *irc.Line) {
+		a.ingressChan <- comm.RawIngressMessage{
+			Identity:   line.Nick,
+			RawContent: line.Text(),
+			ChannelID:  "#jbot-test",
 		}
-	}()
+	})
+
+	if err := a.client.Connect(); err != nil {
+		log.Printf("Connection error: %s\n", err.Error())
+	}
 }
 
 func (a *adapter) SendMessage(m comm.EgressMessage) {
-	a.client.SendMessage(m.Serialize())
+	a.client.Privmsg(m.ChannelID, m.Serialize())
 }
 
 // Adapter is the exported plugin symbol picked up by engine
