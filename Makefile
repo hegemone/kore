@@ -25,7 +25,7 @@ build: vendor kore
 	@echo > /dev/null
 
 test:
-	@go test -cover ${TEST_SOURCES}
+	@go test -v -cover -race ${TEST_SOURCES}
 
 clean:
 	@rm -rf ${BUILD_DIR}
