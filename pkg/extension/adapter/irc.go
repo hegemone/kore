@@ -3,20 +3,20 @@ package main
 
 import (
 	irc "github.com/fluffle/goirc/client"
-	"github.com/hegemone/kore/pkg/comm"
+	"github.com/hegemone/kore/pkg/msg"
 	log "github.com/sirupsen/logrus"
 )
 
 type adapter struct {
 	client      *irc.Conn
-	ingressChan chan<- comm.RawIngressMessage
+	ingressChan chan<- msg.RawIngress
 }
 
 func (a *adapter) Name() string {
 	return "ex-irc.adapters.kore.nsk.io"
 }
 
-func (a *adapter) Listen(ingressCh chan<- comm.RawIngressMessage) {
+func (a *adapter) Listen(ingressCh chan<- msg.RawIngress) {
 	log.Debug("ex-irc.adapters::Listen")
 	a.ingressChan = ingressCh
 
@@ -30,7 +30,7 @@ func (a *adapter) Listen(ingressCh chan<- comm.RawIngressMessage) {
 	})
 
 	a.client.HandleFunc(irc.PRIVMSG, func(conn *irc.Conn, line *irc.Line) {
-		a.ingressChan <- comm.RawIngressMessage{
+		a.ingressChan <- msg.RawIngress{
 			Identity:   line.Nick,
 			RawContent: line.Text(),
 			ChannelID:  "#jbot-test",
@@ -42,7 +42,7 @@ func (a *adapter) Listen(ingressCh chan<- comm.RawIngressMessage) {
 	}
 }
 
-func (a *adapter) SendMessage(m comm.EgressMessage) {
+func (a *adapter) SendMessage(m msg.Egress) {
 	a.client.Privmsg(m.ChannelID, m.Serialize())
 }
 
