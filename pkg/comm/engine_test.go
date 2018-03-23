@@ -1,6 +1,7 @@
 package comm
 
 import (
+	"github.com/hegemone/kore/pkg/msg"
 	"testing"
 )
 
@@ -10,18 +11,18 @@ func (a *TestAdapter) Name() string {
 	return "test"
 }
 
-func (a *TestAdapter) Listen(inChan chan<- RawIngressMessage) {
-	inChan <- RawIngressMessage{}
+func (a *TestAdapter) Listen(inChan chan<- msg.RawIngress) {
+	inChan <- msg.RawIngress{}
 }
 
-func (a *TestAdapter) SendMessage(e EgressMessage) {}
+func (a *TestAdapter) SendMessage(e msg.Egress) {}
 
 func TestStart(t *testing.T) {
 	bufferSize := 8
 	e := &Engine{
-		rawIngressBuffer: make(chan rawIngressBufferMsg, bufferSize),
-		ingressBuffer:    make(chan ingressBufferMsg, bufferSize),
-		egressBuffer:     make(chan egressBufferMsg, bufferSize),
+		rawIngressBuffer: make(chan msg.RawIngressBuffer, bufferSize),
+		ingressBuffer:    make(chan msg.IngressBuffer, bufferSize),
+		egressBuffer:     make(chan msg.EgressBuffer, bufferSize),
 		plugins:          make(map[string]*Plugin),
 		adapters:         make(map[string]Adapter),
 	}
@@ -34,13 +35,13 @@ func TestStart(t *testing.T) {
 	}
 
 	HRICalled, HICalled, HECalled := false, false, false
-	eHandleRawIngress = func(*Engine, rawIngressBufferMsg) {
+	eHandleRawIngress = func(*Engine, msg.RawIngressBuffer) {
 		HRICalled = true
 	}
-	eHandleIngress = func(*Engine, ingressBufferMsg) {
+	eHandleIngress = func(*Engine, msg.IngressBuffer) {
 		HICalled = true
 	}
-	eHandleEgress = func(*Engine, egressBufferMsg) {
+	eHandleEgress = func(*Engine, msg.EgressBuffer) {
 		HECalled = true
 	}
 
@@ -50,11 +51,11 @@ func TestStart(t *testing.T) {
 	t.Logf("Received message %v from ingress buffer", m)
 	<-sleep
 
-	e.rawIngressBuffer <- rawIngressBufferMsg{}
+	e.rawIngressBuffer <- msg.RawIngressBuffer{}
 	<-sleep
-	e.ingressBuffer <- ingressBufferMsg{}
+	e.ingressBuffer <- msg.IngressBuffer{}
 	<-sleep
-	e.egressBuffer <- egressBufferMsg{}
+	e.egressBuffer <- msg.EgressBuffer{}
 	<-sleep
 
 	if !HRICalled {
