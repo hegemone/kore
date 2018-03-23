@@ -2,6 +2,7 @@ package comm
 
 import (
 	"fmt"
+	"github.com/hegemone/kore/pkg/msg"
 	goplugin "plugin"
 	"regexp"
 )
@@ -23,13 +24,13 @@ type Adapter interface {
 	// SendMessage is the public trigger indicating a dynamically loaded adapter
 	// should transmit an `EgressMessage` to its platform. Dynamically loaded
 	// adapters must define how that is done.
-	SendMessage(EgressMessage)
+	SendMessage(msg.Egress)
 	Name() string
 	// Listen is the public trigger that initiates an adapter to start listening
 	// to external platform events. It should be implemented as non-blocking and
 	// push `RawIngressMessage`s to the inChan on the receipt of raw messages
 	// from the external platform.
-	Listen(chan<- RawIngressMessage)
+	Listen(chan<- msg.RawIngress)
 }
 
 // LoadAdapter loads adapter behavior from a given .so adapter file
