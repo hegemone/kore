@@ -22,12 +22,8 @@ type Engine struct {
 }
 
 // NewEngine creates a new Engine.
-func NewEngine() *Engine {
+func NewEngine(c *config.Config) *Engine {
 	// Configurable size of the internal message buffers
-	c, err := config.New()
-	if err != nil {
-		panic(err)
-	}
 	bufferSize := c.GetEngine().BufferSize
 
 	return &Engine{

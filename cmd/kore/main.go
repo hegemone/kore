@@ -6,6 +6,7 @@ import (
 	"syscall"
 
 	"github.com/hegemone/kore/pkg/comm"
+	"github.com/hegemone/kore/pkg/config"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -30,7 +31,12 @@ func main() {
 		os.Exit(FatalExitCode)
 	}
 
-	engine := comm.NewEngine()
+	cfg, err := config.New()
+	if err != nil {
+		panic(err)
+	}
+
+	engine := comm.NewEngine(cfg)
 
 	if err = engine.LoadExtensions(); err != nil {
 		log.Fatalf("Fatal error occurred loading extensions during startup: ", err.Error())
