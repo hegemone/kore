@@ -23,7 +23,7 @@ func TestStart(t *testing.T) {
 		rawIngressBuffer: make(chan msg.RawIngressBuffer, bufferSize),
 		ingressBuffer:    make(chan msg.IngressBuffer, bufferSize),
 		egressBuffer:     make(chan msg.EgressBuffer, bufferSize),
-		plugins:          make(map[string]*Plugin),
+		plugins:          make(map[string]Plugin),
 		adapters:         make(map[string]Adapter),
 	}
 
@@ -47,8 +47,7 @@ func TestStart(t *testing.T) {
 
 	go e.Start()
 
-	m := <-e.rawIngressBuffer
-	t.Logf("Received message %v from ingress buffer", m)
+	<-e.rawIngressBuffer
 	<-sleep
 
 	e.rawIngressBuffer <- msg.RawIngressBuffer{}
