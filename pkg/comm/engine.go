@@ -17,7 +17,7 @@ type Engine struct {
 	egressBuffer     chan msg.EgressBuffer
 
 	// Extensions
-	plugins  map[string]*Plugin
+	plugins  map[string]Plugin
 	adapters map[string]Adapter
 }
 
@@ -30,7 +30,7 @@ func NewEngine(c *config.Config) *Engine {
 		rawIngressBuffer: make(chan msg.RawIngressBuffer, bufferSize),
 		ingressBuffer:    make(chan msg.IngressBuffer, bufferSize),
 		egressBuffer:     make(chan msg.EgressBuffer, bufferSize),
-		plugins:          make(map[string]*Plugin),
+		plugins:          make(map[string]Plugin),
 		adapters:         make(map[string]Adapter),
 	}
 }
@@ -179,7 +179,7 @@ func (e *Engine) applyCmdManifests(content string) []cmdMatch {
 	matches := make([]cmdMatch, 0)
 
 	for _, plugin := range e.plugins {
-		for _ /*cmdName*/, cmdLink := range plugin.CmdManifest {
+		for _, cmdLink := range plugin.CmdManifest() {
 			re := cmdLink.Regexp
 			subm := re.FindStringSubmatch(content)
 
@@ -229,7 +229,7 @@ func (e *Engine) loadPlugins() error {
 			return err
 		}
 
-		e.plugins[loadedPlugin.Name] = loadedPlugin
+		e.plugins[loadedPlugin.Name()] = loadedPlugin
 	}
 
 	log.Info("Successfully loaded plugins:")

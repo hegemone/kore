@@ -5,47 +5,59 @@ import (
 	"fmt"
 	"github.com/hegemone/kore/pkg/comm"
 	log "github.com/sirupsen/logrus"
+	"regexp"
 )
 
-func Name() string {
+type plugin struct{}
+
+func (p *plugin) Name() string {
 	return "bacon.plugins.kore.nsk.io"
 }
 
-func CmdManifest() map[string]string {
-	return map[string]string{
-		`bacon$`:        "CmdBacon",
-		`bacon\s+(\S+)`: "CmdBaconGift",
-	}
-}
-
-func Help() string {
+func (p *plugin) Help() string {
 	return "Usage: !bacon [user]"
 }
 
-func CmdBacon(p *comm.CmdDelegate) {
-	log.Infof("bacon.plugins::CmdBacon, IngressMessage: %+v", p.IngressMessage)
+func (p *plugin) CmdManifest() []comm.CmdLink {
+	return []comm.CmdLink{
+		comm.CmdLink{
+			Regexp: regexp.MustCompile(`bacon$`),
+			CmdFn:  p.CmdBacon,
+		},
+		comm.CmdLink{
+			Regexp: regexp.MustCompile(`bacon\s+(\S+)`),
+			CmdFn:  p.CmdBaconGift,
+		},
+	}
+}
 
-	msg := p.IngressMessage
+func (p *plugin) CmdBacon(c *comm.CmdDelegate) {
+	log.Infof("bacon.plugins::CmdBacon, IngressMessage: %+v", c.IngressMessage)
+
+	msg := c.IngressMessage
 	identity := msg.Originator.Identity
 
 	response := fmt.Sprintf(
 		"gives %s a strip of delicious bacon.", identity,
 	)
 
-	p.SendResponse(response)
+	c.SendResponse(response)
 }
 
-func CmdBaconGift(p *comm.CmdDelegate) {
-	log.Infof("bacon.plugins::CmdBaconGift, IngressMessage: %+v", p.IngressMessage)
+func (p *plugin) CmdBaconGift(c *comm.CmdDelegate) {
+	log.Infof("bacon.plugins::CmdBaconGift, IngressMessage: %+v", c.IngressMessage)
 
-	msg := p.IngressMessage
+	msg := c.IngressMessage
 	identity := msg.Originator.Identity
-	toUser := p.Submatches[1]
+	toUser := c.Submatches[1]
 
 	response := fmt.Sprintf(
 		"gives %s a strip of delicious bacon as a gift from %v",
 		toUser, identity,
 	)
 
-	p.SendResponse(response)
+	c.SendResponse(response)
 }
+
+// Plugin is the exported type picked up by the engine
+var Plugin plugin
