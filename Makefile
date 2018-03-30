@@ -13,6 +13,7 @@ vendor:
 
 plugins: $(PLUGIN_SOURCES)
 	@go build -buildmode=plugin -o ${BUILD_DIR}/bacon.plugins.kore.nsk.io.so -i -ldflags="-s -w" ./pkg/extension/plugin/bacon.go
+	go build -buildmode=plugin -o ${BUILD_DIR}/schedule.plugins.kore.300.io.so -i -ldflags="-s -w" ./pkg/extension/plugin/schedule.go
 
 adapters: $(ADAPTER_SOURCES)
 	@go build -buildmode=plugin -o ${BUILD_DIR}/ex-discord.adapters.kore.nsk.io.so -i -ldflags="-s -w" ./pkg/extension/adapter/discord.go
