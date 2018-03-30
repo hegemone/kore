@@ -5,6 +5,7 @@ import (
 	irc "github.com/fluffle/goirc/client"
 	"github.com/hegemone/kore/pkg/msg"
 	log "github.com/sirupsen/logrus"
+	"strings"
 )
 
 type adapter struct {
@@ -43,7 +44,12 @@ func (a *adapter) Listen(ingressCh chan<- msg.RawIngress) {
 }
 
 func (a *adapter) SendMessage(m msg.Egress) {
-	a.client.Privmsg(m.ChannelID, m.Serialize())
+	// The irc library we are using truncates messages with \n characters to
+	// the first line. As a workaround, split the message on the newline and
+	// send each line individually.
+	for _, i := range strings.Split(m.Serialize(), "\n") {
+		a.client.Privmsg(m.ChannelID, i)
+	}
 }
 
 // Adapter is the exported plugin symbol picked up by engine
