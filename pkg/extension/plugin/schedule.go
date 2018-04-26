@@ -2,15 +2,16 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"regexp"
+	"time"
+
 	"github.com/hegemone/kore/pkg/comm"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/calendar/v3"
-	"io/ioutil"
-	"os"
-	"regexp"
-	"time"
 )
 
 type plugin struct {
@@ -28,22 +29,30 @@ func (p *plugin) Help() string {
 func (p *plugin) CmdManifest() []comm.CmdLink {
 	return []comm.CmdLink{
 		comm.CmdLink{
-			Regexp: regexp.MustCompile(`next$`),
+			Regexp: regexp.MustCompile(`(?P<cmd>next)$`),
 			CmdFn:  p.Next,
 		},
 		comm.CmdLink{
-			Regexp: regexp.MustCompile(`next\s+(.+)`),
+			Regexp: regexp.MustCompile(`(?P<cmd>next)\s+(?P<show>.+)`),
 			CmdFn:  p.ShowNext,
 		},
 		comm.CmdLink{
-			Regexp: regexp.MustCompile(`schedule$`),
+			Regexp: regexp.MustCompile(`(?P<cmd>schedule)$`),
 			CmdFn:  p.Schedule,
 		},
 	}
 }
 
 func (p *plugin) Next(c *comm.CmdDelegate) {
-	c.SendResponse("Not implemented yet")
+	if p.calendar == nil {
+		p.auth()
+	}
+	t := time.Now().Format(time.RFC3339)
+	events, err := p.calendar.Events.List("jalb5frk4cunnaedbfemuqbhv4@group.calendar.google.com").ShowDeleted(false).SingleEvents(true).TimeMin(t).MaxResults(1).Do()
+	if err != nil {
+		log.Fatalf("Unable to retrieve next ten of the user's events. %v", err)
+	}
+	c.SendResponse(fmt.Sprintf("%s (%s)\n", events.Items[0].Summary, events.Items[0].Start.DateTime))
 }
 
 func (p *plugin) ShowNext(c *comm.CmdDelegate) {

@@ -21,11 +21,11 @@ func (p *plugin) Help() string {
 func (p *plugin) CmdManifest() []comm.CmdLink {
 	return []comm.CmdLink{
 		comm.CmdLink{
-			Regexp: regexp.MustCompile(`bacon$`),
+			Regexp: regexp.MustCompile(`(?P<cmd>bacon)$`),
 			CmdFn:  p.CmdBacon,
 		},
 		comm.CmdLink{
-			Regexp: regexp.MustCompile(`bacon\s+(\S+)`),
+			Regexp: regexp.MustCompile(`(?P<cmd>bacon)\s+(?P<recipient>\S+)`),
 			CmdFn:  p.CmdBaconGift,
 		},
 	}
@@ -49,7 +49,7 @@ func (p *plugin) CmdBaconGift(c *comm.CmdDelegate) {
 
 	msg := c.IngressMessage
 	identity := msg.Originator.Identity
-	toUser := c.Submatches[1]
+	toUser := c.Submatches["recipient"]
 
 	response := fmt.Sprintf(
 		"gives %s a strip of delicious bacon as a gift from %v",
