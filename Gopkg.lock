@@ -109,7 +109,7 @@
     "googleapi",
     "googleapi/internal/uritemplates"
   ]
-  revision = "dbbc13f71100fa6ece308335445fca6bb0dd5c2f"
+  revision = "b08f8989af4899034b9816f5291a5bbb1bd576bb"
 
 [[projects]]
   name = "google.golang.org/appengine"

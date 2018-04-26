@@ -14,6 +14,7 @@ vendor:
 plugins: $(PLUGIN_SOURCES)
 	@go build -buildmode=plugin -o ${BUILD_DIR}/bacon.plugins.kore.nsk.io.so -i -ldflags="-s -w" ./pkg/extension/plugin/bacon.go
 	go build -buildmode=plugin -o ${BUILD_DIR}/schedule.plugins.kore.300.io.so -i -ldflags="-s -w" ./pkg/extension/plugin/schedule.go
+	go build -buildmode=plugin -o ${BUILD_DIR}/digitalocean.plugins.kore.300.io.so -i -ldflags="-s -w" ./pkg/extension/plugin/digitalocean.go
 
 adapters: $(ADAPTER_SOURCES)
 	@go build -buildmode=plugin -o ${BUILD_DIR}/ex-discord.adapters.kore.nsk.io.so -i -ldflags="-s -w" ./pkg/extension/adapter/discord.go
@@ -40,7 +41,7 @@ image:
 	docker build -t ${IMAGE}:${TAG} ${PROJECT_ROOT}
 
 run-image:
-	docker run -it ${IMAGE}:${TAG}
+	docker run -it -e DISCORD_TOKEN=${DISCORD_TOKEN} -v /home/${USER}/go/src/:/auth ${IMAGE}:${TAG}
 
 push:
 	docker push ${IMAGE}:${TAG}
