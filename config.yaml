@@ -9,3 +9,5 @@ plugins:
   dir: "build/"
   enabled:
   - bacon.plugins.kore.nsk.io
+  - schedule.plugins.kore.300.io
+  - digitalocean.plugins.kore.300.io
