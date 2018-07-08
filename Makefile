@@ -41,7 +41,7 @@ image:
 	docker build -t ${IMAGE}:${TAG} ${PROJECT_ROOT}
 
 run-image:
-	docker run -it -e DISCORD_TOKEN=${DISCORD_TOKEN} -v /home/${USER}/go/src/:/auth ${IMAGE}:${TAG}
+	docker run -it -e DISCORD_TOKEN=${DISCORD_TOKEN} -e DO_TOKEN=${DO_TOKEN} -v /home/${USER}/go/src/:/auth ${IMAGE}:${TAG}
 
 push:
 	docker push ${IMAGE}:${TAG}

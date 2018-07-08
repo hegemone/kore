@@ -170,7 +170,7 @@ func (e *Engine) handleIngress(ibm msg.IngressBuffer) {
 
 type cmdMatch struct {
 	CmdFn      CmdFn
-	Submatches []string
+	Submatches map[string]string
 }
 
 // applyCmdManifests runs the content against all registered plugin `CmdLink`s
@@ -182,11 +182,18 @@ func (e *Engine) applyCmdManifests(content string) []cmdMatch {
 		for _, cmdLink := range plugin.CmdManifest() {
 			re := cmdLink.Regexp
 			subm := re.FindStringSubmatch(content)
+			args := re.SubexpNames()
 
 			if len(subm) > 0 {
+				log.Infof("Found matching plugin command manifest: %s matches %s", cmdLink, subm)
+				parsedMatches := make(map[string]string)
+				for i, v := range subm {
+					parsedMatches[args[i]] = v
+				}
+				log.Debugf("Parsed matches %v", parsedMatches)
 				matches = append(matches, cmdMatch{
 					CmdFn:      cmdLink.CmdFn,
-					Submatches: subm,
+					Submatches: parsedMatches,
 				})
 			}
 		}
