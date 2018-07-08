@@ -10,14 +10,14 @@ import (
 // author interfaces with the comm server.
 type CmdDelegate struct {
 	IngressMessage msg.Ingress
-	Submatches     []string
+	Submatches     map[string]string
 
 	response string
 }
 
 // NewCmdDelegate creates a new `CmdDelegate` from an `IngressMessage` and
 // a submatch array, produced from the `CmdLink.Regexp` match.
-func NewCmdDelegate(im msg.Ingress, subm []string) CmdDelegate {
+func NewCmdDelegate(im msg.Ingress, subm map[string]string) CmdDelegate {
 	return CmdDelegate{
 		IngressMessage: im,
 		Submatches:     subm,

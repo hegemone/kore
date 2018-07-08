@@ -3,7 +3,7 @@ engine:
 adapters:
   dir: "build/"
   enabled:
-  - ex-discord.adapters.kore.nsk.io
+      #  - ex-discord.adapters.kore.nsk.io
   - ex-irc.adapters.kore.nsk.io
 plugins:
   dir: "build/"

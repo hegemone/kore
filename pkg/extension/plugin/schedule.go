@@ -29,15 +29,15 @@ func (p *plugin) Help() string {
 func (p *plugin) CmdManifest() []comm.CmdLink {
 	return []comm.CmdLink{
 		comm.CmdLink{
-			Regexp: regexp.MustCompile(`next$`),
+			Regexp: regexp.MustCompile(`(?P<cmd>next)$`),
 			CmdFn:  p.Next,
 		},
 		comm.CmdLink{
-			Regexp: regexp.MustCompile(`next\s+(.+)`),
+			Regexp: regexp.MustCompile(`(?P<cmd>next)\s+(?P<show>.+)`),
 			CmdFn:  p.ShowNext,
 		},
 		comm.CmdLink{
-			Regexp: regexp.MustCompile(`schedule$`),
+			Regexp: regexp.MustCompile(`(?P<cmd>schedule)$`),
 			CmdFn:  p.Schedule,
 		},
 	}
