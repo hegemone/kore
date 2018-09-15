@@ -2,19 +2,19 @@ package comm
 
 import (
 	"fmt"
+	"path/filepath"
+
 	"github.com/hegemone/kore/pkg/config"
 	"github.com/hegemone/kore/pkg/msg"
 	log "github.com/sirupsen/logrus"
-	"path/filepath"
 )
 
 // Engine is the heart of korecomm. It's responsible for routing traffic amongst
 // buffers in a concurrent way, as well as the loading and execution of extensions.
 type Engine struct {
 	// Messaging buffers
-	rawIngressBuffer chan msg.RawIngressBuffer
-	ingressBuffer    chan msg.IngressBuffer
-	egressBuffer     chan msg.EgressBuffer
+	ingressBuffer chan msg.MessageInterface
+	egressBuffer  chan msg.MessageInterface
 
 	// Extensions
 	plugins  map[string]Plugin
@@ -27,11 +27,10 @@ func NewEngine(c *config.Config) *Engine {
 	bufferSize := c.GetEngine().BufferSize
 
 	return &Engine{
-		rawIngressBuffer: make(chan msg.RawIngressBuffer, bufferSize),
-		ingressBuffer:    make(chan msg.IngressBuffer, bufferSize),
-		egressBuffer:     make(chan msg.EgressBuffer, bufferSize),
-		plugins:          make(map[string]Plugin),
-		adapters:         make(map[string]Adapter),
+		ingressBuffer: make(chan msg.MessageInterface, bufferSize),
+		egressBuffer:  make(chan msg.MessageInterface, bufferSize),
+		plugins:       make(map[string]Plugin),
+		adapters:      make(map[string]Adapter),
 	}
 }
 
@@ -49,10 +48,9 @@ func (e *Engine) LoadExtensions() error {
 // into if there isn't a better way to structure the code to make testing
 // easier but for now, this'll do.
 var (
-	eHandleRawIngress = (*Engine).handleRawIngress
-	eHandleIngress    = (*Engine).handleIngress
-	eHandleEgress     = (*Engine).handleEgress
-	funcDone          = func() {}
+	eHandleIngress = (*Engine).handleIngress
+	eHandleEgress  = (*Engine).handleEgress
+	funcDone       = func() {}
 )
 
 // Start will cause the engine to start listening on all successfully loaded
@@ -67,29 +65,26 @@ func (e *Engine) Start() {
 
 	// Spawn listening routines for each adapter
 	for _, adapter := range e.adapters {
-		adapterCh := make(chan msg.RawIngress, 2)
+		adapterIngressChannel := make(chan msg.MessageInterface, 2)
 
-		go func(adapter Adapter, adapterCh chan msg.RawIngress) {
+		go func(adapter Adapter, adapterIngressChannel chan msg.MessageInterface) {
 			// Tell the adapter to start listening and sending messages back via
 			// their own ingress channel. Listen should be non-blocking!
-			adapter.Listen(adapterCh)
+			adapter.Listen(adapterIngressChannel)
 
 			// Engine listens to the N channels the adapters are transmitting on
 			// for RawIngressMessages. Adapter channels are fanned-in to the
 			// rawIngressBuffer for parsing.
-			for rim := range adapterCh {
-				e.rawIngressBuffer <- msg.RawIngressBuffer{adapter.Name(), rim}
+			for message := range adapterIngressChannel {
+				e.ingressBuffer <- message
 				funcDone()
 			}
-		}(adapter, adapterCh)
+		}(adapter, adapterIngressChannel)
 	}
 
 	// Wire up messaging events to their handlers
 	for {
 		select {
-		case m := <-e.rawIngressBuffer:
-			eHandleRawIngress(e, m)
-			funcDone()
 		case m := <-e.ingressBuffer:
 			eHandleIngress(e, m)
 			funcDone()
@@ -103,55 +98,24 @@ func (e *Engine) Start() {
 // handleRawIngress main function is to filter commands from raw messages.
 // If a message is determined to be a command, it is parsed and structured as
 // an `IngressMessage`, then passed to the ingressBuffer for further handling.
-func (e *Engine) handleRawIngress(m msg.RawIngressBuffer) {
+func (e *Engine) handleIngress(message msg.MessageInterface) {
 	go func() {
-		adapterName := m.AdapterName
-		rm := m.RawIngressMessage
-
-		if !isCmd(rm.RawContent) {
+		if !isCmd(message.GetRawMessage()) {
 			return
 		}
 
-		if string(rm.RawContent[0]) != adapterCmdTriggerPrefix {
+		if string(message.GetRawMessage()[0]) != adapterCmdTriggerPrefix {
 			log.Warningf(
 				"raw content was flagged as a command, but does not contain trigger prefix, skipping...",
 			)
-			log.Warning(rm.RawContent)
+			log.Warning(message.GetRawMessage)
 			return
 		}
 
-		content := parseRawContent(rm.RawContent)
-
-		e.ingressBuffer <- msg.IngressBuffer{
-			IngressMessage: msg.Ingress{
-				Originator: msg.Originator{Identity: rm.Identity, ChannelID: rm.ChannelID, AdapterName: adapterName},
-				Content:    content,
-			},
-		}
-	}()
-}
-
-// parseRawContent takes in the entire command string and strips off the command
-// symbol. In the case of the original Showbot, this would be `!`. It's possible
-// in the future that this function will do more processing to aid in message
-// routing.
-func parseRawContent(rawContent string) string {
-	return rawContent[1:len(rawContent)]
-}
-
-// handleIngress is responsible for routing `IngressMessage`s to the set of
-// matching plugin cmds that have been registered. If the `CmdDelegate` passed
-// to the plugin cmd contains a response, it will construct an `EgressMessage`
-// and push to the `Engine`'s egress buffer for dispatch to the relevant adapter.
-func (e *Engine) handleIngress(ibm msg.IngressBuffer) {
-	im := ibm.IngressMessage
-	log.Debugf("Engine::handleIngress: %+v", im)
-
-	go func() {
-		cmdMatches := e.applyCmdManifests(im.Content)
+		cmdMatches := e.applyCmdManifests(message.GetParsedMessage())
 
 		for _, cmdMatch := range cmdMatches {
-			delegate := NewCmdDelegate(im, cmdMatch.Submatches)
+			delegate := NewCmdDelegate(message, cmdMatch.Submatches)
 
 			// Execute plugin command and pass delegate as an intermediary
 			cmdMatch.CmdFn(&delegate)
@@ -159,10 +123,10 @@ func (e *Engine) handleIngress(ibm msg.IngressBuffer) {
 			// If the plugin has sent a response to the delegate, let's build
 			// an `EgressMessage` and push that onto the outgoing buffer for dispatch
 			if delegate.response != "" {
-				e.egressBuffer <- msg.EgressBuffer{
-					Originator:    im.Originator,
-					EgressMessage: msg.Egress{ChannelID: im.Originator.ChannelID, Content: delegate.response},
-				}
+				log.Debugf("Engine::handleIngress: plugin response is %+v", delegate.response)
+				message.SetPluginResponse(delegate.response)
+				log.Debugf("Engine::handleIngress: sending message %+v to egressBuffer", message)
+				e.egressBuffer <- message
 			}
 		}
 	}()
@@ -204,10 +168,11 @@ func (e *Engine) applyCmdManifests(content string) []cmdMatch {
 
 // handleEgress simply routes an `EgressMessage` off the egressBuffer to an
 // adapter for transmission.
-func (e *Engine) handleEgress(ebm msg.EgressBuffer) {
+func (e *Engine) handleEgress(ebm msg.MessageInterface) {
 	log.Debugf("Engine::handleEgress: %+v", ebm)
 	go func() {
-		e.adapters[ebm.Originator.AdapterName].SendMessage(ebm.EgressMessage)
+		log.Debugf("Engine::handleEgress: sending message to adapter %+v", ebm.GetAdapterName())
+		e.adapters[ebm.GetAdapterName()].SendMessage(ebm)
 	}()
 }
 
@@ -278,5 +243,6 @@ func (e *Engine) loadAdapters() error {
 	for adapterName := range e.adapters {
 		log.Infof("-> %s", adapterName)
 	}
+
 	return nil
 }
