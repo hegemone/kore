@@ -1,9 +1,10 @@
 package comm
 
 import (
-	log "github.com/sirupsen/logrus"
 	goplugin "plugin"
 	"regexp"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // CmdFn is the required function signature of a plugin command. It should accept

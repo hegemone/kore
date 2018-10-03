@@ -9,7 +9,7 @@ import (
 // between the `Engine` and the `Plugin`. It is the primary interface a plugin
 // author interfaces with the comm server.
 type CmdDelegate struct {
-	IngressMessage msg.Ingress
+	IngressMessage msg.MessageInterface
 	Submatches     map[string]string
 
 	response string
@@ -17,7 +17,7 @@ type CmdDelegate struct {
 
 // NewCmdDelegate creates a new `CmdDelegate` from an `IngressMessage` and
 // a submatch array, produced from the `CmdLink.Regexp` match.
-func NewCmdDelegate(im msg.Ingress, subm map[string]string) CmdDelegate {
+func NewCmdDelegate(im msg.MessageInterface, subm map[string]string) CmdDelegate {
 	return CmdDelegate{
 		IngressMessage: im,
 		Submatches:     subm,

@@ -3,9 +3,10 @@ package main
 
 import (
 	"fmt"
+	"regexp"
+
 	"github.com/hegemone/kore/pkg/comm"
 	log "github.com/sirupsen/logrus"
-	"regexp"
 )
 
 type plugin struct{}
@@ -35,7 +36,7 @@ func (p *plugin) CmdBacon(c *comm.CmdDelegate) {
 	log.Infof("bacon.plugins::CmdBacon, IngressMessage: %+v", c.IngressMessage)
 
 	msg := c.IngressMessage
-	identity := msg.Originator.Identity
+	identity := msg.GetIdentity()
 
 	response := fmt.Sprintf(
 		"gives %s a strip of delicious bacon.", identity,
@@ -48,7 +49,7 @@ func (p *plugin) CmdBaconGift(c *comm.CmdDelegate) {
 	log.Infof("bacon.plugins::CmdBaconGift, IngressMessage: %+v", c.IngressMessage)
 
 	msg := c.IngressMessage
-	identity := msg.Originator.Identity
+	identity := msg.GetIdentity()
 	toUser := c.Submatches["recipient"]
 
 	response := fmt.Sprintf(
