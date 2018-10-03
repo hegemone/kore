@@ -4,6 +4,8 @@ package main
 import (
 	"strings"
 
+	"strings"
+
 	irc "github.com/fluffle/goirc/client"
 	"github.com/hegemone/kore/pkg/msg"
 	log "github.com/sirupsen/logrus"
