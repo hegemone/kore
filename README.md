@@ -30,3 +30,5 @@ Important make commands:
 * `make clean` cleans the `build/` directory.
 * `make image` will build a Docker image from source in your local registry.
 * `make` by default will run `make build`, which is an alias for `kore`.
+
+Change for testing
